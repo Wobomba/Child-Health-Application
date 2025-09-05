@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: child_health_db
+    environment:
+      POSTGRES_DB: child_health
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/migrations:/docker-entrypoint-initdb.d/migrations
+    networks:
+      - child_health_network
+    restart: unless-stopped
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: child_health_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - child_health_network
+    restart: unless-stopped
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: child_health_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/child_health
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-secret-key-here-change-in-production
+    volumes:
+      - ./backend:/app
+      - ./uploads:/app/uploads
+      - ./ml_models:/app/ml_models
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - child_health_network
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Nginx for static file serving and reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: child_health_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./uploads:/var/www/uploads
+    depends_on:
+      - backend
+    networks:
+      - child_health_network
+    restart: unless-stopped
+
+  # ML Model Service (optional - for heavy ML processing)
+  ml_service:
+    build:
+      context: ./ml_models
+      dockerfile: Dockerfile
+    container_name: child_health_ml
+    environment:
+      - MODEL_PATH=/app/models
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./ml_models:/app/models
+      - ./uploads:/app/uploads
+    depends_on:
+      - redis
+    networks:
+      - child_health_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  child_health_network:
+    driver: bridge
