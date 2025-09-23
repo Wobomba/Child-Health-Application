@@ -1,0 +1,67 @@
+{
+  "preprocessing": {
+    "image": {
+      "target_size": [224, 224],
+      "channels": 3,
+      "normalize": true,
+      "resize_method": "crop_and_resize"
+    },
+    "face_detection": {
+      "enabled": true,
+      "cascade_path": "haarcascades/haarcascade_frontalface_default.xml",
+      "min_face_size": [50, 50],
+      "scale_factor": 1.1,
+      "min_neighbors": 5
+    },
+    "augmentation": {
+      "rotation_range": 20,
+      "width_shift_range": 0.2,
+      "height_shift_range": 0.2,
+      "horizontal_flip": true,
+      "zoom_range": 0.2,
+      "brightness_range": [0.8, 1.2],
+      "contrast_range": [0.8, 1.2]
+    },
+    "quality": {
+      "min_resolution": [100, 100],
+      "max_file_size": 10485760,
+      "allowed_formats": [".jpg", ".jpeg", ".png", ".bmp"],
+      "blur_threshold": 100
+    }
+  },
+  "training": {
+    "model": {
+      "input_shape": [224, 224, 3],
+      "num_classes": 3,
+      "base_model": "mobilenetv2",
+      "dropout_rate": 0.2,
+      "learning_rate": 0.001
+    },
+    "training": {
+      "batch_size": 32,
+      "epochs": 100,
+      "validation_split": 0.2,
+      "patience": 10,
+      "min_delta": 0.001
+    },
+    "data_augmentation": {
+      "rotation_range": 20,
+      "width_shift_range": 0.2,
+      "height_shift_range": 0.2,
+      "horizontal_flip": true,
+      "zoom_range": 0.2,
+      "brightness_range": [0.8, 1.2]
+    },
+    "paths": {
+      "data_dir": "data/training",
+      "model_dir": "ml_models",
+      "logs_dir": "logs/training"
+    }
+  },
+  "evaluation": {
+    "metrics": ["accuracy", "precision", "recall", "f1_score"],
+    "confusion_matrix": true,
+    "classification_report": true,
+    "roc_auc": true
+  }
+}

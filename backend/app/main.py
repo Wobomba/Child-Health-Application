@@ -9,7 +9,12 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 from app.core.config import settings
+from app.core.logging import setup_logging
+from app.core.error_handlers import register_error_handlers
 from app.api.endpoints import auth, children, growth, photos, assessments
+
+# Setup logging
+setup_logging(debug=settings.debug)
 
 # Create FastAPI app instance
 app = FastAPI(
@@ -28,6 +33,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register error handlers
+register_error_handlers(app)
 
 # Include API routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
