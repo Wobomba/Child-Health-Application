@@ -1,3 +1,4 @@
+
 """
 Photo management API endpoints
 """
@@ -21,7 +22,7 @@ from app.schemas.photo import (
     AIAnalysisRequest, AIAnalysisResponse, PhotoSummary, PhotoType, AnalysisStatus
 )
 from app.services.photo_service import photo_service
-from app.services.ai_service import ai_service
+from app.services.ai_service import ai_analysis_service
 
 router = APIRouter()
 
@@ -74,10 +75,10 @@ async def analyze_photo_background(photo_id: int, db: Session):
             db.commit()
             
             # Run AI analysis
-            analysis_result = await ai_service.analyze_photo(photo, photo.file_path)
+            analysis_result = await ai_analysis_service.analyze_photo(photo, photo.file_path)
             
             # Update photo with results
-            ai_service.update_photo_with_analysis(db, photo, analysis_result)
+            ai_analysis_service.update_photo_with_analysis(db, photo, analysis_result)
     except Exception as e:
         # Log error and mark as failed
         if photo:
@@ -235,10 +236,10 @@ async def analyze_photo(
         db.commit()
         
         # Run AI analysis
-        analysis_result = await ai_service.analyze_photo(photo, photo.file_path)
+        analysis_result = await ai_analysis_service.analyze_photo(photo, photo.file_path)
         
         # Update photo with results
-        updated_photo = ai_service.update_photo_with_analysis(db, photo, analysis_result)
+        updated_photo = ai_analysis_service.update_photo_with_analysis(db, photo, analysis_result)
         
         return analysis_result
         
@@ -347,4 +348,4 @@ def get_ai_model_info(
 ):
     """Get information about the AI model"""
     
-    return ai_service.get_model_info()
+    return ai_analysis_service.get_model_info()

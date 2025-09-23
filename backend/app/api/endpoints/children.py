@@ -10,6 +10,7 @@ import math
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_vht_or_higher
 from app.models.user import User
+from app.models.child import Child
 from app.schemas.child import (
     ChildCreate, ChildUpdate, ChildResponse, ChildList, 
     ChildSummary, ChildSearch

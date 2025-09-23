@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 from app.core.config import settings
-from app.api.endpoints import auth, children, growth, photos
+from app.api.endpoints import auth, children, growth, photos, assessments
 
 # Create FastAPI app instance
 app = FastAPI(
@@ -34,6 +34,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(children.router, prefix="/api/v1", tags=["children"])
 app.include_router(growth.router, prefix="/api/v1", tags=["growth"])
 app.include_router(photos.router, prefix="/api/v1/photos", tags=["photos"])
+app.include_router(assessments.router, prefix="/api/v1/assessments", tags=["assessments"])
 
 @app.get("/")
 async def root():
