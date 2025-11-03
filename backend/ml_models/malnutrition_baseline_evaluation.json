@@ -1,0 +1,19 @@
+{
+  "accuracy": 0.0,
+  "precision": {
+    "normal": 0.0,
+    "moderate_malnutrition": 0.0,
+    "severe_malnutrition": 0.0
+  },
+  "recall": {
+    "normal": 0.0,
+    "moderate_malnutrition": 0.0,
+    "severe_malnutrition": 0.0
+  },
+  "f1_score": {
+    "normal": 0.0,
+    "moderate_malnutrition": 0.0,
+    "severe_malnutrition": 0.0
+  },
+  "note": "Baseline model - not trained on real data"
+}
