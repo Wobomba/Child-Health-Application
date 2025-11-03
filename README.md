@@ -8,15 +8,19 @@ An AI-powered malnutrition detection and growth monitoring tool designed for Vil
 - **User Authentication & Authorization**: JWT-based auth with role-based access control (Admin, VHT, Nurse)
 - **Child Management**: Complete CRUD operations for child records with unique ID generation
 - **Growth Monitoring**: Track weight, height, BMI, and Z-scores with growth trend analysis
-- **Photo Upload & AI Analysis**: Upload child photos with mock AI malnutrition detection
+- **Photo Upload & AI Analysis**: Real MobileNetV2-based malnutrition detection with TensorFlow
+- **AI Training Pipeline**: Complete model training system with data preprocessing
+- **Dataset Download Tools**: Scripts to download datasets from Hugging Face, Kaggle, or organize local data
+- **Health Assessments**: Comprehensive health assessment CRUD operations
 - **Comprehensive API**: RESTful API with automatic OpenAPI documentation
 - **Database Migrations**: Alembic-based database schema management
 - **Data Validation**: Pydantic schemas for robust data validation
+- **Error Handling & Logging**: Structured logging and comprehensive error handling
 - **Health Endpoints**: Server health checks and monitoring
 
 ### 🚧 Planned Features
-- **Enhanced AI Models**: Real malnutrition detection algorithms
-- **Health Assessments**: Clinical findings and treatment plans
+- **Enhanced AI Models**: Additional model architectures and ensemble methods
+- **Advanced Health Assessments**: Clinical findings and treatment plans
 - **Real-time Alerts**: Notifications for children requiring attention
 - **Multi-language Support**: English, Luganda, Runyankole, Luo, and Swahili
 - **Offline Capability**: Work in areas with limited connectivity
@@ -182,26 +186,79 @@ The application uses JWT-based authentication with the following roles:
 - `GET /summary/stats`: Get photo upload and analysis statistics
 - `GET /ai/model-info`: Get AI model information and capabilities
 
-### 🏥 Health Assessments (*Coming in Next Phase*)
+### 🏥 Health Assessments (`/api/v1/assessments`)
 
-- Assessment endpoints will be implemented for comprehensive health evaluations
+- `GET /`: List assessments with filtering and pagination
+- `POST /`: Create new health assessment
+- `GET /{id}`: Get assessment details
+- `PUT /{id}`: Update assessment
+- `DELETE /{id}`: Delete assessment
+- `GET /child/{child_id}`: Get all assessments for a child
+- `GET /search`: Advanced search with multiple filters
 
 ## 🤖 AI/ML Models
 
-The application includes pre-trained models for:
+The application includes MobileNetV2-based models for:
 
-- **Malnutrition Detection**: Analyze facial and body photos
-- **Growth Prediction**: Predict future growth patterns
-- **Risk Assessment**: Identify children at risk
+- **Malnutrition Detection**: Real-time analysis of facial and body photos using TensorFlow
+- **Growth Prediction**: Analyze growth trends and predict future patterns
+- **Risk Assessment**: Identify children at risk based on multiple indicators
+
+### Dataset Download
+
+Download and organize training datasets from multiple sources:
+
+```bash
+# From Hugging Face
+python scripts/download_dataset.py \
+    --source huggingface \
+    --dataset dataset-name \
+    --limit 1000 \
+    --output data/training
+
+# From Kaggle (requires API setup)
+python scripts/download_dataset.py \
+    --source kaggle \
+    --dataset username/dataset-name \
+    --output data/training
+
+# Organize local images
+python scripts/download_dataset.py \
+    --source local \
+    --path /path/to/images \
+    --output data/training
+```
+
+See `backend/scripts/README_DATASET_DOWNLOAD.md` for detailed usage.
 
 ### Model Training
 
 To train custom models:
 
-1. Prepare training data in `ml_models/data/`
-2. Configure model parameters in `ml_models/config.yaml`
-3. Run training script: `python ml_models/train.py`
-4. Deploy model to `ml_models/models/`
+1. **Download or prepare training data**:
+   ```bash
+   python scripts/download_dataset.py --source huggingface --dataset dataset-name
+   ```
+
+2. **Preprocess data**:
+   ```bash
+   python scripts/train_model.py --data-dir data/training --preprocess
+   ```
+
+3. **Train the model**:
+   ```bash
+   python scripts/train_model.py \
+       --data-dir data/training \
+       --model-name malnutrition_v1 \
+       --config config/training_config.json
+   ```
+
+4. **Model files**:
+   - Trained model: `ml_models/{model_name}.h5`
+   - Metadata: `ml_models/{model_name}_metadata.json`
+   - Evaluation: `ml_models/{model_name}_evaluation.json`
+
+See `backend/docs/TRAINING_GUIDE.md` for comprehensive training documentation.
 
 ## 🚀 Deployment
 
