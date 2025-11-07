@@ -8,9 +8,9 @@ import os
 
 class Settings(BaseSettings):
     # Application settings
-    app_name: str = "AI Child Health"
+    app_name: str = "PostPart"
     app_version: str = "1.0.0"
-    debug: bool = False
+    debug: bool = True  # Use SQLite for development
     
     # Database settings
     database_url: str = "postgresql://postgres:password@localhost:5432/child_health"

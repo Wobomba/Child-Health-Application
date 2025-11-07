@@ -22,6 +22,11 @@ export interface ChildCreate {
   parent_name: string
   village: string
   district: string
+  parent_phone?: string
+  parent_address?: string
+  birth_weight?: number
+  has_disabilities?: boolean
+  disability_details?: string
 }
 
 export interface ChildUpdate extends Partial<ChildCreate> {}
@@ -35,7 +40,12 @@ export const childService = {
     district?: string
   }): Promise<{ items: Child[]; total: number }> {
     const response = await api.get('/children/', { params })
-    return response.data
+    // Backend returns { children, total, page, per_page, total_pages }
+    // Convert to { items, total } for frontend compatibility
+    return {
+      items: response.data.children || [],
+      total: response.data.total || 0
+    }
   },
 
   async getById(id: number): Promise<Child> {

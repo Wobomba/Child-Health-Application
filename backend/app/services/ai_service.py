@@ -431,15 +431,31 @@ class AIAnalysisService:
     
     def update_photo_with_analysis(self, db: Session, photo: Photo, analysis_result: AIAnalysisResponse) -> Photo:
         """Update photo with AI analysis results"""
+        import json
+        
         try:
             # Update photo with analysis results
-            photo.analysis_status = analysis_result.analysis_status
+            photo.analysis_status = analysis_result.analysis_status.value if hasattr(analysis_result.analysis_status, 'value') else str(analysis_result.analysis_status)
             photo.malnutrition_score = analysis_result.malnutrition_score
             photo.confidence_level = analysis_result.confidence_level
-            photo.recommendations = analysis_result.recommendations
-            photo.analysis_data = analysis_result.detected_features
-            photo.analyzed_at = analysis_result.analyzed_at
-            photo.model_version = analysis_result.model_version
+            
+            # Convert recommendations list to JSON string
+            if analysis_result.recommendations:
+                photo.recommendations = json.dumps(analysis_result.recommendations)
+            else:
+                photo.recommendations = None
+            
+            # Convert detected_features dict to JSON string
+            if analysis_result.detected_features:
+                photo.detected_features = json.dumps(analysis_result.detected_features)
+            else:
+                photo.detected_features = None
+            
+            # Set analysis notes
+            photo.analysis_notes = analysis_result.analysis_notes
+            
+            # Mark as analyzed
+            photo.is_analyzed = True
             
             db.commit()
             db.refresh(photo)

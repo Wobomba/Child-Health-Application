@@ -1,6 +1,6 @@
-# AI Child Health - Frontend Application
+# PostPart - Frontend Application
 
-React + TypeScript + Vite frontend for the AI Child Health malnutrition detection and growth monitoring system.
+React + TypeScript + Vite frontend for PostPart - Child Health Monitoring System.
 
 ## 🚀 Quick Start
 

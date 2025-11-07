@@ -62,11 +62,37 @@ class PhotoResponse(BaseModel):
     # Metadata
     notes: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
     
     # Computed properties
     file_size_mb: Optional[float] = None
     is_malnourished: Optional[bool] = None
+    
+    @validator('detected_features', pre=True)
+    def parse_detected_features(cls, v):
+        """Parse JSON string to dict if needed"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return v
+    
+    @validator('recommendations', pre=True)
+    def parse_recommendations(cls, v):
+        """Parse JSON string to list if needed"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return v
     
     class Config:
         from_attributes = True

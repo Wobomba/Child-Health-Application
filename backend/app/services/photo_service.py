@@ -110,8 +110,9 @@ class PhotoService:
             # Validate it's actually an image by trying to open it
             try:
                 with Image.open(file_path) as img:
-                    # Verify image can be opened
-                    img.verify()
+                    # Just try to load the image to verify it's valid
+                    # We don't use verify() as it closes the file
+                    img.load()
             except Exception as e:
                 # Delete invalid file
                 file_path.unlink(missing_ok=True)

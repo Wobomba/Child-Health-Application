@@ -4,7 +4,8 @@ export interface Photo {
   id: number
   child_id: number
   file_path: string
-  file_name: string
+  filename: string  // Backend uses 'filename'
+  file_name?: string  // Alias for compatibility
   file_size: number
   mime_type: string
   analysis_status: string
@@ -27,6 +28,7 @@ export const photoService = {
     const formData = new FormData()
     formData.append('file', data.file)
     formData.append('child_id', data.child_id.toString())
+    formData.append('auto_analyze', 'true') // Automatically trigger AI analysis
     if (data.notes) {
       formData.append('notes', data.notes)
     }
@@ -45,7 +47,12 @@ export const photoService = {
     child_id?: number
   }): Promise<{ items: Photo[]; total: number }> {
     const response = await api.get('/photos/', { params })
-    return response.data
+    // Backend returns { photos, total, page, per_page, total_pages }
+    // Convert to { items, total } for frontend compatibility
+    return {
+      items: response.data.photos || [],
+      total: response.data.total || 0
+    }
   },
 
   async getById(id: number): Promise<Photo> {
@@ -68,7 +75,13 @@ export const photoService = {
   },
 
   getPhotoUrl(photo: Photo): string {
-    return `${api.defaults.baseURL?.replace('/api/v1', '')}/photos/${photo.id}/file`
+    // Include auth token in URL for image loading
+    const token = localStorage.getItem('access_token')
+    const baseUrl = api.defaults.baseURL?.replace('/api/v1', '') || 'http://localhost:8000'
+    if (token) {
+      return `${baseUrl}/api/v1/photos/${photo.id}/download?token=${encodeURIComponent(token)}`
+    }
+    return `${baseUrl}/api/v1/photos/${photo.id}/download`
   },
 }
 

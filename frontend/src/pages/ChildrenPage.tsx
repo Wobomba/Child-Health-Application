@@ -2,14 +2,24 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { childService, Child } from '../services/childService'
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, Camera, Download, CheckSquare, Square, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ChildFormModal from '../components/ChildFormModal'
+import PhotoUploadModal from '../components/PhotoUploadModal'
+import { exportChildren } from '../utils/exportUtils'
+import LoadingSkeleton from '../components/LoadingSkeleton'
+import EmptyState from '../components/EmptyState'
+import BulkActions from '../components/BulkActions'
 
 const ChildrenPage = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false)
+  const [selectedChildId, setSelectedChildId] = useState<number | null>(null)
+  const [selectedChildName, setSelectedChildName] = useState<string>('')
+  const [selectedChildren, setSelectedChildren] = useState<number[]>([])
 
   const { data, isLoading } = useQuery({
     queryKey: ['children', searchTerm],
@@ -27,22 +37,46 @@ const ChildrenPage = () => {
     },
   })
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map(id => childService.delete(id)))
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['children'] })
+      setSelectedChildren([])
+    },
+  })
+
   return (
     <div>
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Children</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Manage child records and view their health information
+            Manage child records and view their nutritional status
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add Child
-        </button>
+        <div className="flex items-center space-x-3">
+          {data?.items && data.items.length > 0 && (
+            <button
+              onClick={() => {
+                exportChildren(data.items)
+                toast.success('Children data exported successfully!')
+              }}
+              className="btn btn-secondary flex items-center"
+            >
+              <Download className="h-5 w-5 mr-2" />
+              <span>Export</span>
+            </button>
+          )}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-primary flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            <span>Add Child</span>
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -59,17 +93,66 @@ const ChildrenPage = () => {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {data?.items && data.items.length > 0 && (
+        <BulkActions
+          items={data.items}
+          selectedItems={selectedChildren}
+          onSelectionChange={setSelectedChildren}
+          onBulkDelete={bulkDeleteMutation.mutateAsync}
+          onBulkExport={(items) => {
+            exportChildren(items)
+            toast.success('Selected children exported!')
+          }}
+          getItemId={(child) => child.id}
+          itemName="children"
+        />
+      )}
+
       {/* Table */}
       <div className="card">
         {isLoading ? (
-          <div className="text-center py-8">Loading...</div>
+          <LoadingSkeleton type="table" count={5} />
         ) : data?.items?.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No children found</div>
+          <EmptyState
+            icon={Users}
+            title="No children found"
+            description={searchTerm ? "Try adjusting your search criteria" : "Get started by adding your first child"}
+            action={
+              !searchTerm && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="btn btn-primary"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add First Child
+                </button>
+              )
+            }
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                    <button
+                      onClick={() => {
+                        if (selectedChildren.length === data?.items?.length) {
+                          setSelectedChildren([])
+                        } else {
+                          setSelectedChildren(data?.items?.map(c => c.id) || [])
+                        }
+                      }}
+                      className="flex items-center"
+                    >
+                      {selectedChildren.length === data?.items?.length && data?.items?.length > 0 ? (
+                        <CheckSquare className="h-5 w-5 text-primary-600" />
+                      ) : (
+                        <Square className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Child ID
                   </th>
@@ -93,6 +176,23 @@ const ChildrenPage = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {data?.items?.map((child: Child) => (
                   <tr key={child.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => {
+                          if (selectedChildren.includes(child.id)) {
+                            setSelectedChildren(selectedChildren.filter(id => id !== child.id))
+                          } else {
+                            setSelectedChildren([...selectedChildren, child.id])
+                          }
+                        }}
+                      >
+                        {selectedChildren.includes(child.id) ? (
+                          <CheckSquare className="h-5 w-5 text-primary-600" />
+                        ) : (
+                          <Square className="h-5 w-5 text-gray-400" />
+                        )}
+                      </button>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {child.unique_id}
                     </td>
@@ -145,22 +245,41 @@ const ChildrenPage = () => {
         )}
       </div>
 
-      {/* Create Modal - Simplified, can be enhanced */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Add New Child</h2>
-            <p className="text-gray-600 mb-4">
-              Child creation form would go here. For now, use the API directly or add form components.
-            </p>
-            <button
-              onClick={() => setShowCreateModal(false)}
-              className="btn btn-secondary"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+      {/* Create Child Modal */}
+      <ChildFormModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={(childId) => {
+          // Fetch child details to get name
+          childService.getById(childId).then((child) => {
+            setSelectedChildId(childId)
+            setSelectedChildName(`${child.first_name} ${child.last_name}`)
+            setShowCreateModal(false)
+            setShowPhotoUpload(true)
+            toast.success('Child registered! Now upload a photo for AI analysis.')
+          }).catch(() => {
+            setSelectedChildId(childId)
+            setSelectedChildName('')
+            setShowCreateModal(false)
+            setShowPhotoUpload(true)
+            toast.success('Child registered! Now upload a photo for AI analysis.')
+          })
+        }}
+      />
+
+      {/* Photo Upload Modal */}
+      {selectedChildId && (
+        <PhotoUploadModal
+          isOpen={showPhotoUpload}
+          onClose={() => {
+            setShowPhotoUpload(false)
+            // Don't clear selectedChildId so user can upload more photos
+            // setSelectedChildId(null)
+            // setSelectedChildName('')
+          }}
+          childId={selectedChildId}
+          childName={selectedChildName}
+        />
       )}
     </div>
   )

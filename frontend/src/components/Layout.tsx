@@ -1,10 +1,9 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { LogOut, Home, Users, Camera, Menu, X } from 'lucide-react'
+import { Home, Users, Camera, Menu, X, FileText } from 'lucide-react'
 import { useState } from 'react'
+import UserProfileMenu from './UserProfileMenu'
 
 const Layout = () => {
-  const { user, logout } = useAuth()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -12,12 +11,8 @@ const Layout = () => {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Children', href: '/children', icon: Users },
     { name: 'Photos', href: '/photos', icon: Camera },
+    { name: 'Reports', href: '/reports', icon: FileText },
   ]
-
-  const handleLogout = async () => {
-    await logout()
-    window.location.href = '/login'
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -27,7 +22,7 @@ const Layout = () => {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-xl font-bold text-primary-600">AI Child Health</h1>
+                <h1 className="text-xl font-bold text-primary-600">PostPart</h1>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 {navigation.map((item) => {
@@ -52,16 +47,7 @@ const Layout = () => {
               </div>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:items-center">
-              <span className="text-sm text-gray-700 mr-4">
-                {user?.full_name} ({user?.role})
-              </span>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </button>
+              <UserProfileMenu />
             </div>
             <div className="sm:hidden flex items-center">
               <button
@@ -101,18 +87,9 @@ const Layout = () => {
               })}
             </div>
             <div className="pt-4 pb-3 border-t border-gray-200">
-              <div className="px-4 text-sm text-gray-700">
-                {user?.full_name} ({user?.role})
+              <div className="px-4">
+                <UserProfileMenu />
               </div>
-              <button
-                onClick={handleLogout}
-                className="mt-3 block w-full text-left px-4 py-2 text-base font-medium text-red-600 hover:bg-gray-50"
-              >
-                <div className="flex items-center">
-                  <LogOut className="mr-3 h-5 w-5" />
-                  Logout
-                </div>
-              </button>
             </div>
           </div>
         )}

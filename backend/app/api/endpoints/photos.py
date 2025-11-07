@@ -11,10 +11,12 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, BackgroundTasks, Query
 from fastapi.responses import FileResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_active_user, require_vht_or_higher
+from app.core.security import verify_token
 from app.models.user import User
 from app.models.photo import Photo
 from app.schemas.photo import (
@@ -60,18 +62,27 @@ async def upload_photo(
     
     # Trigger AI analysis in background if requested
     if auto_analyze:
-        background_tasks.add_task(analyze_photo_background, photo.id, db)
+        background_tasks.add_task(analyze_photo_background, photo.id)
     
     return photo
 
 
-async def analyze_photo_background(photo_id: int, db: Session):
+async def analyze_photo_background(photo_id: int):
     """Background task to analyze photo with AI"""
+    from app.core.database import SessionLocal
+    
+    # Create a new database session for the background task
+    db = SessionLocal()
+    photo = None
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
-        if photo and photo.analysis_status == AnalysisStatus.PENDING:
+        if not photo:
+            print(f"Photo {photo_id} not found for background analysis")
+            return
+        
+        if photo.analysis_status == AnalysisStatus.PENDING.value or photo.analysis_status == "pending":
             # Update status to processing
-            photo.analysis_status = AnalysisStatus.PROCESSING
+            photo.analysis_status = AnalysisStatus.PROCESSING.value
             db.commit()
             
             # Run AI analysis
@@ -79,12 +90,23 @@ async def analyze_photo_background(photo_id: int, db: Session):
             
             # Update photo with results
             ai_analysis_service.update_photo_with_analysis(db, photo, analysis_result)
+            print(f"Successfully analyzed photo {photo_id}")
     except Exception as e:
         # Log error and mark as failed
-        if photo:
-            photo.analysis_status = AnalysisStatus.FAILED
-            photo.analysis_notes = f"Analysis failed: {str(e)}"
-            db.commit()
+        db.rollback()
+        try:
+            if photo:
+                photo.analysis_status = AnalysisStatus.FAILED.value
+                photo.analysis_notes = f"Analysis failed: {str(e)}"
+                db.commit()
+        except Exception as commit_error:
+            print(f"Failed to update photo status after error: {commit_error}")
+        # Log the error (in production, use proper logging)
+        print(f"Background analysis error for photo {photo_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        db.close()
 
 
 @router.get("/", response_model=PhotoList)
@@ -166,10 +188,41 @@ def delete_photo(
 def download_photo(
     photo_id: int,
     thumbnail: bool = Query(default=False, description="Download thumbnail instead of full image"),
+    token: Optional[str] = Query(None, description="Auth token for image loading"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
 ):
-    """Download photo file"""
+    """Download photo file
+    
+    Supports token in query params for image loading via <img> tags
+    """
+    current_user = None
+    
+    # Try to get user from token in query params first (for image loading)
+    if token:
+        try:
+            payload = verify_token(token)
+            user_id = payload.get("sub")
+            if user_id:
+                current_user = db.query(User).filter(User.id == int(user_id)).first()
+        except Exception:
+            pass
+    
+    # Fallback to standard auth header
+    if not current_user and credentials:
+        try:
+            payload = verify_token(credentials.credentials)
+            user_id = payload.get("sub")
+            if user_id:
+                current_user = db.query(User).filter(User.id == int(user_id)).first()
+        except Exception:
+            pass
+    
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
     
     photo = photo_service.get_photo(db, photo_id, current_user.id, current_user.role)
     if not photo:
@@ -322,7 +375,7 @@ async def batch_analyze_photos(
     
     # Add batch analysis to background tasks
     photo_ids = [p.id for p in photo_list.photos]
-    background_tasks.add_task(batch_analyze_background, photo_ids, db)
+    background_tasks.add_task(batch_analyze_background, photo_ids)
     
     return {
         "message": f"Started batch analysis for {len(photo_ids)} photos",
@@ -330,11 +383,11 @@ async def batch_analyze_photos(
     }
 
 
-async def batch_analyze_background(photo_ids: List[int], db: Session):
+async def batch_analyze_background(photo_ids: List[int]):
     """Background task for batch photo analysis"""
     try:
         for photo_id in photo_ids:
-            await analyze_photo_background(photo_id, db)
+            await analyze_photo_background(photo_id)
             # Small delay between analyses
             await asyncio.sleep(0.1)
     except Exception as e:

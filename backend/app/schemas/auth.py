@@ -11,9 +11,11 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
-    user_id: int
-    username: str
-    role: str
+    user: Optional[dict] = None  # UserResponse dict
+    # Legacy fields for backward compatibility
+    user_id: Optional[int] = None
+    username: Optional[str] = None
+    role: Optional[str] = None
 
 class TokenData(BaseModel):
     """Token payload data"""

@@ -1,11 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import ChildrenPage from './pages/ChildrenPage'
 import ChildDetailPage from './pages/ChildDetailPage'
 import PhotosPage from './pages/PhotosPage'
+import ProfilePage from './pages/ProfilePage'
+import ReportsPage from './pages/ReportsPage'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -25,6 +29,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route
         path="/"
         element={
@@ -38,6 +43,8 @@ const AppRoutes = () => {
         <Route path="children" element={<ChildrenPage />} />
         <Route path="children/:id" element={<ChildDetailPage />} />
         <Route path="photos" element={<PhotosPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="reports" element={<ReportsPage />} />
       </Route>
     </Routes>
   )
@@ -45,11 +52,13 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   )
 }
 

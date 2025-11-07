@@ -3,7 +3,7 @@ from sqlalchemy import and_, or_, desc, func
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-from app.models.assessment import HealthAssessment
+from app.models.assessment import Assessment
 from app.models.child import Child
 from app.schemas.assessment import (
     HealthAssessmentCreate,
@@ -16,7 +16,7 @@ class AssessmentService:
     def __init__(self, db: Session):
         self.db = db
 
-    def create_assessment(self, assessment_data: HealthAssessmentCreate, vht_user_id: int) -> HealthAssessment:
+    def create_assessment(self, assessment_data: HealthAssessmentCreate, vht_user_id: int) -> Assessment:
         """Create a new health assessment."""
         # Verify the child exists and belongs to the VHT
         child = self.db.query(Child).filter(
@@ -31,7 +31,7 @@ class AssessmentService:
             raise ValueError("Child not found or access denied")
         
         # Create the assessment
-        assessment = HealthAssessment(
+        assessment = Assessment(
             child_id=assessment_data.child_id,
             vht_user_id=vht_user_id,
             assessment_type=assessment_data.assessment_type,
@@ -90,13 +90,13 @@ class AssessmentService:
         self.db.refresh(assessment)
         return assessment
 
-    def get_assessment(self, assessment_id: int, user_id: int, user_role: str) -> Optional[HealthAssessment]:
+    def get_assessment(self, assessment_id: int, user_id: int, user_role: str) -> Optional[Assessment]:
         """Get a specific health assessment by ID."""
-        query = self.db.query(HealthAssessment).filter(HealthAssessment.id == assessment_id)
+        query = self.db.query(Assessment).filter(Assessment.id == assessment_id)
         
         # VHTs can only see their own assessments
         if user_role == "vht":
-            query = query.filter(HealthAssessment.vht_user_id == user_id)
+            query = query.filter(Assessment.vht_user_id == user_id)
         
         return query.first()
 
@@ -109,22 +109,22 @@ class AssessmentService:
         limit: int = 100,
         user_id: int = None,
         user_role: str = None
-    ) -> List[HealthAssessment]:
+    ) -> List[Assessment]:
         """Get health assessments with optional filtering."""
-        query = self.db.query(HealthAssessment)
+        query = self.db.query(Assessment)
         
         # VHTs can only see their own assessments
         if user_role == "vht":
-            query = query.filter(HealthAssessment.vht_user_id == user_id)
+            query = query.filter(Assessment.vht_user_id == user_id)
         
         if child_id:
-            query = query.filter(HealthAssessment.child_id == child_id)
+            query = query.filter(Assessment.child_id == child_id)
         
         if status:
-            query = query.filter(HealthAssessment.status == status)
+            query = query.filter(Assessment.status == status)
         
         if risk_level:
-            query = query.filter(HealthAssessment.risk_level == risk_level)
+            query = query.filter(Assessment.risk_level == risk_level)
         
         return query.offset(skip).limit(limit).all()
 
@@ -135,15 +135,15 @@ class AssessmentService:
         user_role: str, 
         skip: int = 0, 
         limit: int = 100
-    ) -> List[HealthAssessment]:
+    ) -> List[Assessment]:
         """Get all health assessments for a specific child."""
-        query = self.db.query(HealthAssessment).filter(HealthAssessment.child_id == child_id)
+        query = self.db.query(Assessment).filter(Assessment.child_id == child_id)
         
         # VHTs can only see their own assessments
         if user_role == "vht":
-            query = query.filter(HealthAssessment.vht_user_id == user_id)
+            query = query.filter(Assessment.vht_user_id == user_id)
         
-        return query.order_by(desc(HealthAssessment.assessment_date)).offset(skip).limit(limit).all()
+        return query.order_by(desc(Assessment.assessment_date)).offset(skip).limit(limit).all()
 
     def update_assessment(
         self, 
@@ -151,7 +151,7 @@ class AssessmentService:
         assessment_update: HealthAssessmentUpdate, 
         user_id: int, 
         user_role: str
-    ) -> Optional[HealthAssessment]:
+    ) -> Optional[Assessment]:
         """Update a health assessment."""
         assessment = self.get_assessment(assessment_id, user_id, user_role)
         
@@ -171,7 +171,7 @@ class AssessmentService:
 
     def delete_assessment(self, assessment_id: int, user_id: int) -> bool:
         """Soft delete a health assessment (admin only)."""
-        assessment = self.db.query(HealthAssessment).filter(HealthAssessment.id == assessment_id).first()
+        assessment = self.db.query(Assessment).filter(Assessment.id == assessment_id).first()
         
         if not assessment:
             return False
@@ -198,37 +198,37 @@ class AssessmentService:
 
     def get_assessment_stats(self, user_id: int, user_role: str) -> Dict[str, Any]:
         """Get assessment statistics summary."""
-        query = self.db.query(HealthAssessment)
+        query = self.db.query(Assessment)
         
         # VHTs can only see their own assessments
         if user_role == "vht":
-            query = query.filter(HealthAssessment.vht_user_id == user_id)
+            query = query.filter(Assessment.vht_user_id == user_id)
         
         total_assessments = query.count()
         
         # Status breakdown
         status_breakdown = {}
         for status in AssessmentStatus:
-            count = query.filter(HealthAssessment.status == status).count()
+            count = query.filter(Assessment.status == status).count()
             status_breakdown[status.value] = count
         
         # Risk level breakdown
         risk_breakdown = {}
         for risk_level in RiskLevel:
-            count = query.filter(HealthAssessment.risk_level == risk_level).count()
+            count = query.filter(Assessment.risk_level == risk_level).count()
             risk_breakdown[risk_level.value] = count
         
         # Recent assessments (last 30 days)
         thirty_days_ago = datetime.utcnow().replace(day=datetime.utcnow().day - 30)
         recent_assessments = query.filter(
-            HealthAssessment.assessment_date >= thirty_days_ago
+            Assessment.assessment_date >= thirty_days_ago
         ).count()
         
         # High priority assessments
         high_priority = query.filter(
             or_(
-                HealthAssessment.risk_level == RiskLevel.HIGH,
-                HealthAssessment.risk_level == RiskLevel.CRITICAL
+                Assessment.risk_level == RiskLevel.HIGH,
+                Assessment.risk_level == RiskLevel.CRITICAL
             )
         ).count()
         

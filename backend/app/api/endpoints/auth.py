@@ -57,13 +57,18 @@ async def login(
         expires_delta=access_token_expires
     )
     
+    # Return token with user data
+    from app.schemas.auth import UserResponse
+    user_response = UserResponse.model_validate(user)
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "expires_in": settings.access_token_expire_minutes * 60,
-        "user_id": user.id,
-        "username": user.username,
-        "role": user.role
+        "user": user_response.model_dump(),
+        "user_id": user.id,  # Legacy support
+        "username": user.username,  # Legacy support
+        "role": user.role  # Legacy support
     }
 
 @router.post("/login/form", response_model=Token)
@@ -83,6 +88,46 @@ async def logout(current_user: User = Depends(get_current_user)) -> Any:
     # In a real application, you might want to blacklist the token
     # For now, we'll just return a success message
     return {"message": "Successfully logged out"}
+
+@router.post("/register/public", response_model=UserResponse)
+async def register_public(
+    user_data: UserCreate,
+    db: Session = Depends(get_db)
+) -> Any:
+    """Public user registration endpoint"""
+    # Check if username already exists
+    existing_user = db.query(User).filter(User.username == user_data.username).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
+        )
+    
+    # Check if email already exists
+    if user_data.email:
+        existing_email = db.query(User).filter(User.email == user_data.email).first()
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+    
+    # Create new user with default role 'vht' (Village Health Team)
+    hashed_password = get_password_hash(user_data.password)
+    new_user = User(
+        username=user_data.username,
+        email=user_data.email,
+        full_name=user_data.full_name,
+        hashed_password=hashed_password,
+        role=user_data.role or "vht",  # Default to VHT for public registrations
+        is_active=True
+    )
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    return new_user
 
 @router.post("/register", response_model=UserResponse)
 async def register(

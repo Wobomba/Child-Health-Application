@@ -4,9 +4,9 @@ from typing import List, Optional
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.auth import get_current_user
+from app.core.deps import get_current_user
 from app.models.user import User
-from app.models.assessment import HealthAssessment
+from app.models.assessment import Assessment
 from app.schemas.assessment import (
     HealthAssessmentCreate,
     HealthAssessmentUpdate,

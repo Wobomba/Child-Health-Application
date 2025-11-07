@@ -1,7 +1,7 @@
 {
-  "name": "ai-child-health-frontend",
+  "name": "postpart-frontend",
   "version": "1.0.0",
-  "description": "Frontend for AI Child Health - Malnutrition Detection System",
+  "description": "Frontend for PostPart - Child Health Monitoring System",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
