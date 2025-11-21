@@ -34,13 +34,8 @@ const PhotoUploadModal = ({ isOpen, onClose, childId, childName }: PhotoUploadMo
       queryClient.invalidateQueries({ queryKey: ['children', 'stats'] })
       queryClient.invalidateQueries({ queryKey: ['children', childId] })
       toast.success('Photo uploaded successfully! AI analysis will begin automatically.')
-      // Reset form but keep modal open for multiple uploads
-      setSelectedFile(null)
-      setPreview(null)
-      setNotes('')
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+      // Close modal after successful upload
+      handleClose()
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.detail || 'Failed to upload photo'

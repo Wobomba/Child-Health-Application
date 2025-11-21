@@ -10,6 +10,7 @@ import PhotoUploadModal from '../components/PhotoUploadModal'
 import PhotoLightbox from '../components/PhotoLightbox'
 import GrowthChart from '../components/GrowthChart'
 import GrowthRecordForm from '../components/GrowthRecordForm'
+import AssessmentList from '../components/AssessmentList'
 import { growthService } from '../services/growthService'
 
 const ChildDetailPage = () => {
@@ -402,9 +403,13 @@ const ChildDetailPage = () => {
           )}
 
           {activeTab === 'assessments' && (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">Health assessments coming soon</p>
+            <div>
+              {child && (
+                <AssessmentList
+                  childId={child.id}
+                  childName={`${child.first_name} ${child.last_name}`}
+                />
+              )}
             </div>
           )}
         </div>
@@ -423,7 +428,12 @@ const ChildDetailPage = () => {
           >
             Record Growth
           </button>
-          <button className="btn btn-secondary w-full justify-center">Add Assessment</button>
+          <button 
+            onClick={() => setActiveTab('assessments')}
+            className="btn btn-secondary w-full justify-center"
+          >
+            Add Assessment
+          </button>
           <button className="btn btn-secondary w-full justify-center">View History</button>
         </div>
       </div>

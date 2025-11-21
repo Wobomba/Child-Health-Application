@@ -286,16 +286,19 @@ const ChildFormModal = ({ isOpen, onClose, onSuccess }: ChildFormModalProps) => 
               <div className="md:col-span-2">
                 <label htmlFor="parent_address" className="block text-sm font-medium text-gray-700 mb-1">
                   <Home className="h-4 w-4 inline mr-1" />
-                  Address
+                  Parent/Guardian Home Address (Optional)
                 </label>
                 <input
                   id="parent_address"
                   type="text"
                   className="input"
-                  placeholder="Home address"
+                  placeholder="Detailed home address (e.g., street, house number)"
                   value={formData.parent_address || ''}
                   onChange={(e) => setFormData({ ...formData, parent_address: e.target.value })}
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Optional: Detailed address for contact purposes. This is different from the administrative location below.
+                </p>
               </div>
             </div>
           </div>
@@ -304,8 +307,11 @@ const ChildFormModal = ({ isOpen, onClose, onSuccess }: ChildFormModalProps) => 
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <MapPin className="h-5 w-5 mr-2 text-primary-600" />
-              Location
+              Child's Administrative Location
             </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Required: Administrative location where the child lives (for program tracking and reporting)
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="village" className="block text-sm font-medium text-gray-700 mb-1">
@@ -316,6 +322,7 @@ const ChildFormModal = ({ isOpen, onClose, onSuccess }: ChildFormModalProps) => 
                   type="text"
                   required
                   className={`input ${errors.village ? 'border-danger-500' : ''}`}
+                  placeholder="e.g., Ntinda, Nakawa"
                   value={formData.village}
                   onChange={(e) => {
                     setFormData({ ...formData, village: e.target.value })
@@ -336,6 +343,7 @@ const ChildFormModal = ({ isOpen, onClose, onSuccess }: ChildFormModalProps) => 
                   type="text"
                   required
                   className={`input ${errors.district ? 'border-danger-500' : ''}`}
+                  placeholder="e.g., Kampala, Mukono"
                   value={formData.district}
                   onChange={(e) => {
                     setFormData({ ...formData, district: e.target.value })

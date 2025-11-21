@@ -182,20 +182,29 @@ class PhotoService:
     
     def get_photo(self, db: Session, photo_id: int, user_id: int, user_role: str) -> Optional[Photo]:
         """Get a single photo by ID with permission check"""
-        query = db.query(Photo).filter(Photo.id == photo_id)
+        # First get the photo
+        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        if not photo:
+            return None
         
-        # Apply role-based filtering
+        # Apply role-based permission check
         if user_role not in ["admin", "doctor"]:
+            # Get the child for this photo
+            child = db.query(Child).filter(Child.id == photo.child_id).first()
+            if not child:
+                return None
+            
             if user_role == "nurse":
                 # Nurses can see photos from their district
-                query = query.join(Child).filter(
-                    Child.district == db.query(User.district).filter(User.id == user_id).scalar()
-                )
+                user = db.query(User).filter(User.id == user_id).first()
+                if not user or child.district != user.district:
+                    return None
             elif user_role == "vht":
                 # VHTs can only see photos of children they manage
-                query = query.join(Child).filter(Child.vht_user_id == user_id)
+                if child.vht_user_id != user_id:
+                    return None
         
-        return query.first()
+        return photo
     
     def get_photos(
         self, 

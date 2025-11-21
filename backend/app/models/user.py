@@ -20,12 +20,15 @@ class User(Base):
     district = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    last_login = Column(DateTime(timezone=True), nullable=True)
+    password_reset_token = Column(String(255), nullable=True)
+    password_reset_expires = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     children = relationship("Child", back_populates="vht_user")
-    assessments = relationship("Assessment", back_populates="assessor")
+    assessments = relationship("Assessment", back_populates="assessor", foreign_keys="[Assessment.assessor_id]")
     
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', role='{self.role}')>"

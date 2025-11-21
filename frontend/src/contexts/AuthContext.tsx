@@ -5,7 +5,7 @@ interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (username: string, password: string) => Promise<any>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (username: string, password: string) => {
     const response = await authService.login({ username, password })
     setUser(response.user)
+    return response  // Return response so LoginPage can access is_first_login
   }
 
   const logout = async () => {

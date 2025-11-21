@@ -11,7 +11,15 @@ export interface Photo {
   analysis_status: string
   malnutrition_score: number | null
   confidence_level: number | null
-  recommendations: string | null
+  recommendations: string[] | null
+  detected_diseases?: Array<{
+    disease: string
+    confidence: number
+    description: string
+    symptoms_detected: string[]
+  }> | null
+  disaster_predictions?: string[] | null
+  nutrition_tips?: string[] | null
   notes: string | null
   created_at: string
   analyzed_at: string | null

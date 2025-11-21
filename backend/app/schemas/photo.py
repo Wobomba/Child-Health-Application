@@ -58,6 +58,9 @@ class PhotoResponse(BaseModel):
     is_analyzed: bool = False
     is_flagged: bool = False
     flag_reason: Optional[str] = None
+    detected_diseases: Optional[List[Dict[str, Any]]] = None
+    disaster_predictions: Optional[List[str]] = None
+    nutrition_tips: Optional[List[str]] = None
     
     # Metadata
     notes: Optional[str] = None
@@ -83,6 +86,45 @@ class PhotoResponse(BaseModel):
     
     @validator('recommendations', pre=True)
     def parse_recommendations(cls, v):
+        """Parse JSON string to list if needed"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return v
+    
+    @validator('detected_diseases', pre=True)
+    def parse_detected_diseases(cls, v):
+        """Parse JSON string to list if needed"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return v
+    
+    @validator('disaster_predictions', pre=True)
+    def parse_disaster_predictions(cls, v):
+        """Parse JSON string to list if needed"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return v
+    
+    @validator('nutrition_tips', pre=True)
+    def parse_nutrition_tips(cls, v):
         """Parse JSON string to list if needed"""
         if v is None:
             return None
@@ -161,6 +203,9 @@ class AIAnalysisResponse(BaseModel):
     processing_time_seconds: Optional[float] = None
     model_version: Optional[str] = None
     analyzed_at: Optional[datetime] = None
+    detected_diseases: Optional[List[Dict[str, Any]]] = None  # List of detected diseases with confidence
+    disaster_predictions: Optional[List[str]] = None  # Potential consequences if malnutrition not addressed
+    nutrition_tips: Optional[List[str]] = None  # Age-based nutrition recommendations
     
     class Config:
         from_attributes = True

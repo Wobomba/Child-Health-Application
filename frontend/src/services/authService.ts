@@ -10,6 +10,8 @@ export interface RegisterData {
   email: string
   password: string
   full_name: string
+  district?: string
+  village?: string
   role?: string
 }
 
@@ -26,6 +28,7 @@ export interface AuthResponse {
   access_token: string
   token_type: string
   user: User
+  is_first_login?: boolean
 }
 
 export const authService = {

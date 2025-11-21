@@ -2,12 +2,16 @@
 Authentication endpoints
 """
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Any
+import secrets
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 from app.core.database import get_db
 from app.core.security import verify_password, create_access_token, get_password_hash
 from app.core.deps import get_current_user, require_admin
@@ -50,6 +54,12 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Track login time and determine if first-time login
+    is_first_login = user.last_login is None
+    user.last_login = datetime.utcnow()
+    db.commit()
+    db.refresh(user)
+    
     # Create access token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
@@ -68,7 +78,8 @@ async def login(
         "user": user_response.model_dump(),
         "user_id": user.id,  # Legacy support
         "username": user.username,  # Legacy support
-        "role": user.role  # Legacy support
+        "role": user.role,  # Legacy support
+        "is_first_login": is_first_login  # Indicates if this is the first login
     }
 
 @router.post("/login/form", response_model=Token)
@@ -120,6 +131,8 @@ async def register_public(
         full_name=user_data.full_name,
         hashed_password=hashed_password,
         role=user_data.role or "vht",  # Default to VHT for public registrations
+        village=user_data.village,
+        district=user_data.district,
         is_active=True
     )
     
@@ -237,13 +250,28 @@ async def reset_password_request(
     reset_data: UserPasswordReset,
     db: Session = Depends(get_db)
 ) -> Any:
-    """Request password reset (sends email)"""
+    """Request password reset - generates a reset token"""
     # Find user by email
     user = db.query(User).filter(User.email == reset_data.email).first()
     if user:
-        # In a real application, you would send an email with reset token
-        # For now, we'll just return a success message
-        pass
+        # Generate a secure random token
+        reset_token = secrets.token_urlsafe(32)
+        # Set token expiration (24 hours from now)
+        expires_at = datetime.utcnow() + timedelta(hours=24)
+        
+        # Store token and expiration in database
+        user.password_reset_token = reset_token
+        user.password_reset_expires = expires_at
+        db.commit()
+        
+        # In a production environment, you would send an email with the token
+        # For development, we'll return the token in the response (remove this in production!)
+        logger.info(f"Password reset token for {user.email}: {reset_token}")
+        
+        return {
+            "message": "If the email exists, a password reset link has been sent",
+            "reset_token": reset_token  # Remove this in production - only for development
+        }
     
     # Always return success to prevent email enumeration
     return {"message": "If the email exists, a password reset link has been sent"}
@@ -254,9 +282,39 @@ async def reset_password_confirm(
     db: Session = Depends(get_db)
 ) -> Any:
     """Confirm password reset with token"""
-    # In a real application, you would verify the reset token
-    # For now, we'll just return an error
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Password reset confirmation not implemented yet"
-    )
+    # Find user by reset token
+    user = db.query(User).filter(
+        User.password_reset_token == reset_confirm.token
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Check if token has expired
+    if user.password_reset_expires and user.password_reset_expires < datetime.utcnow():
+        # Clear expired token
+        user.password_reset_token = None
+        user.password_reset_expires = None
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token has expired. Please request a new one."
+        )
+    
+    # Validate new password
+    if len(reset_confirm.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long"
+        )
+    
+    # Update password and clear reset token
+    user.hashed_password = get_password_hash(reset_confirm.new_password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    db.commit()
+    
+    return {"message": "Password has been reset successfully. Please login with your new password."}

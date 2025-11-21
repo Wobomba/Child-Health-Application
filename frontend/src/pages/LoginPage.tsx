@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useMutation } from '@tanstack/react-query'
-import { Heart, User, Lock, LogIn } from 'lucide-react'
+import { User, Lock, LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const LoginPage = () => {
@@ -13,8 +13,17 @@ const LoginPage = () => {
 
   const loginMutation = useMutation({
     mutationFn: () => login(formData.username, formData.password),
-    onSuccess: () => {
-      toast.success('Login successful!')
+    onSuccess: (data: any) => {
+      // Show welcome message based on first-time login
+      if (data?.is_first_login) {
+        toast.success(`Welcome! We're glad to have you here. Let's get started!`, {
+          duration: 5000,
+        })
+      } else {
+        toast.success('Welcome back!', {
+          duration: 3000,
+        })
+      }
       navigate('/dashboard')
     },
     onError: (error: any) => {
@@ -45,10 +54,13 @@ const LoginPage = () => {
       <div className="max-w-md w-full">
         {/* Logo/Brand Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4 shadow-lg">
-            <Heart className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img 
+              src="/logo.png" 
+              alt="PostPart Logo" 
+              className="h-24 w-auto object-contain"
+            />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">PostPart</h1>
           <p className="text-lg text-gray-600">Child Health Monitoring</p>
         </div>
 
@@ -142,12 +154,17 @@ const LoginPage = () => {
             </div>
           </form>
 
-          {/* Register Link */}
-          <div className="mt-6 text-center">
+          {/* Register and Forgot Password Links */}
+          <div className="mt-6 space-y-3 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
               <Link to="/register" className="font-medium text-primary-600 hover:text-primary-700">
                 Create an account
+              </Link>
+            </p>
+            <p className="text-sm">
+              <Link to="/forgot-password" className="font-medium text-primary-600 hover:text-primary-700">
+                Forgot your password?
               </Link>
             </p>
           </div>

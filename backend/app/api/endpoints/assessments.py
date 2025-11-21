@@ -25,14 +25,16 @@ def create_assessment(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new health assessment for a child."""
-    if current_user.role not in ["vht", "admin"]:
+    if current_user.role not in ["vht", "nurse", "admin", "doctor"]:
         raise HTTPException(
             status_code=403,
-            detail="Only VHTs and admins can create health assessments"
+            detail="Only authorized users can create health assessments"
         )
     
     assessment_service = AssessmentService(db)
-    return assessment_service.create_assessment(assessment, current_user.id)
+    # Use current_user.id as vht_user_id for VHTs, or as assessor_id for others
+    vht_user_id = current_user.id if current_user.role == "vht" else current_user.id
+    return assessment_service.create_assessment(assessment, vht_user_id)
 
 @router.get("/", response_model=List[HealthAssessmentResponse])
 def get_assessments(

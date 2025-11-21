@@ -314,6 +314,33 @@ class AIAnalysisService:
                 facial_features
             )
             
+            # Detect diseases based on symptoms
+            detected_diseases = self._detect_diseases(
+                malnutrition_score=analysis_result['final_score'],
+                facial_features=facial_features,
+                status=analysis_result['status']
+            )
+            
+            # Generate disaster predictions
+            disaster_predictions = self._generate_disaster_predictions(
+                malnutrition_score=analysis_result['final_score'],
+                status=analysis_result['status']
+            )
+            
+            # Get child age for nutrition tips
+            child_age_months = None
+            if photo.child and photo.child.date_of_birth:
+                from datetime import date
+                today = date.today()
+                age_delta = today - photo.child.date_of_birth
+                child_age_months = age_delta.days // 30
+            
+            # Generate nutrition tips based on age
+            nutrition_tips = self._generate_nutrition_tips(
+                child_age_months,
+                analysis_result['status']
+            )
+            
             # Calculate processing time
             processing_time = (datetime.utcnow() - start_time).total_seconds()
             
@@ -355,7 +382,10 @@ class AIAnalysisService:
                 is_malnourished=analysis_result['final_score'] > 0.6,
                 processing_time_seconds=processing_time,
                 model_version=self.MODEL_VERSION,
-                analyzed_at=datetime.utcnow()
+                analyzed_at=datetime.utcnow(),
+                detected_diseases=detected_diseases,
+                disaster_predictions=disaster_predictions,
+                nutrition_tips=nutrition_tips
             )
             
         except Exception as e:
@@ -429,6 +459,160 @@ class AIAnalysisService:
         
         return recommendations[:8]  # Limit to 8 recommendations
     
+    def _detect_diseases(self, malnutrition_score: float, facial_features: Dict[str, float], 
+                        status: str) -> List[Dict[str, Any]]:
+        """Detect specific malnutrition-related diseases based on symptoms"""
+        detected = []
+        
+        # Only detect diseases if malnutrition is present
+        if malnutrition_score < 0.4:
+            return detected
+        
+        # Kwashiorkor (protein deficiency) - symptoms: edema, skin changes, hair changes
+        if facial_features.get('skin_condition', 0.5) < 0.3 and malnutrition_score > 0.5:
+            confidence = min(0.9, malnutrition_score + 0.2)
+            detected.append({
+                'disease': 'kwashiorkor',
+                'confidence': round(confidence, 2),
+                'description': 'Protein-energy malnutrition characterized by edema, skin changes, and hair discoloration',
+                'symptoms_detected': ['Poor skin condition', 'Potential edema signs']
+            })
+        
+        # Marasmus (severe wasting) - symptoms: severe weight loss, muscle wasting
+        if facial_features.get('cheek_prominence', 0.5) < 0.25 and malnutrition_score > 0.6:
+            confidence = min(0.9, malnutrition_score + 0.15)
+            detected.append({
+                'disease': 'marasmus',
+                'confidence': round(confidence, 2),
+                'description': 'Severe wasting due to overall energy deficiency',
+                'symptoms_detected': ['Severe facial wasting', 'Loss of cheek prominence']
+            })
+        
+        # Rickets (vitamin D/calcium deficiency) - symptoms: bone deformities, growth issues
+        if facial_features.get('facial_fullness', 0.5) < 0.35 and malnutrition_score > 0.45:
+            confidence = min(0.85, malnutrition_score + 0.1)
+            detected.append({
+                'disease': 'rickets',
+                'confidence': round(confidence, 2),
+                'description': 'Bone softening and deformities due to vitamin D and calcium deficiency',
+                'symptoms_detected': ['Poor facial development', 'Potential growth issues']
+            })
+        
+        # Scurvy (vitamin C deficiency) - symptoms: bleeding gums, poor wound healing, skin issues
+        if facial_features.get('skin_condition', 0.5) < 0.35 and malnutrition_score > 0.4:
+            confidence = min(0.8, malnutrition_score + 0.1)
+            detected.append({
+                'disease': 'scurvy',
+                'confidence': round(confidence, 2),
+                'description': 'Vitamin C deficiency causing bleeding, poor wound healing, and skin problems',
+                'symptoms_detected': ['Poor skin condition', 'Potential vitamin deficiency signs']
+            })
+        
+        # Sort by confidence (highest first)
+        detected.sort(key=lambda x: x['confidence'], reverse=True)
+        return detected[:3]  # Return top 3 most likely diseases
+    
+    def _generate_disaster_predictions(self, malnutrition_score: float, status: str) -> List[str]:
+        """Generate predictions of potential consequences if malnutrition is not addressed"""
+        predictions = []
+        
+        if malnutrition_score < 0.4:
+            return ["No immediate concerns. Continue monitoring for healthy growth."]
+        
+        if status == "severe_malnutrition" or malnutrition_score > 0.7:
+            predictions.extend([
+                "CRITICAL: Without intervention, risk of severe complications including:",
+                "• Life-threatening infections due to weakened immune system",
+                "• Organ failure and potential death",
+                "• Permanent stunting and cognitive impairment",
+                "• Severe developmental delays that may be irreversible",
+                "• Increased susceptibility to diseases like pneumonia and diarrhea"
+            ])
+        elif status == "moderate_malnutrition" or malnutrition_score > 0.5:
+            predictions.extend([
+                "WARNING: If nutrition is not improved, the child may experience:",
+                "• Growth stunting and delayed physical development",
+                "• Weakened immune system leading to frequent illnesses",
+                "• Cognitive delays affecting learning and development",
+                "• Increased risk of chronic diseases later in life",
+                "• Reduced ability to fight infections"
+            ])
+        else:
+            predictions.extend([
+                "CAUTION: Continued poor nutrition may lead to:",
+                "• Slower growth compared to peers",
+                "• Increased susceptibility to infections",
+                "• Potential learning difficulties",
+                "• Risk of developing more severe malnutrition"
+            ])
+        
+        return predictions
+    
+    def _generate_nutrition_tips(self, child_age_months: Optional[int], status: str) -> List[str]:
+        """Generate age-specific nutrition recommendations"""
+        tips = []
+        
+        if child_age_months is None:
+            tips.append("Unable to determine child age. Please ensure date of birth is recorded.")
+            return tips
+        
+        # Age-based nutrition recommendations
+        if child_age_months <= 6:
+            tips.extend([
+                "For infants 0-6 months:",
+                "• Exclusive breastfeeding is recommended (8-12 times per day)",
+                "• Ensure mother has adequate nutrition for quality breast milk",
+                "• Monitor feeding frequency and infant weight gain",
+                "• Consult healthcare provider if breastfeeding is insufficient"
+            ])
+        elif child_age_months <= 12:
+            tips.extend([
+                "For infants 6-12 months:",
+                "• Continue breastfeeding while introducing complementary foods",
+                "• Introduce nutrient-rich foods: mashed fruits, vegetables, and protein",
+                "• Include iron-rich foods like pureed meat, beans, or fortified cereals",
+                "• Offer clean, safe water in addition to breast milk",
+                "• Feed 3-4 times per day with nutritious snacks"
+            ])
+        elif child_age_months <= 24:
+            tips.extend([
+                "For children 12-24 months:",
+                "• Continue breastfeeding if possible, or provide nutrient-dense milk",
+                "• Provide diverse diet: fruits, vegetables, grains, proteins",
+                "• Include protein sources: eggs, fish, meat, beans, or dairy",
+                "• Ensure adequate iron intake to prevent anemia",
+                "• Offer 3 main meals and 2-3 healthy snacks daily",
+                "• Provide clean water and avoid sugary drinks"
+            ])
+        elif child_age_months <= 60:
+            tips.extend([
+                "For children 2-5 years:",
+                "• Provide balanced meals with all food groups",
+                "• Include protein: eggs, fish, meat, beans, nuts",
+                "• Offer plenty of fruits and vegetables (5 servings daily)",
+                "• Include whole grains and starchy foods for energy",
+                "• Ensure adequate calcium for bone development (dairy or fortified alternatives)",
+                "• Provide clean water and limit sugary snacks/drinks",
+                "• Consider vitamin supplements if diet is limited"
+            ])
+        else:
+            tips.extend([
+                "For children over 5 years:",
+                "• Maintain balanced diet with all food groups",
+                "• Increase protein intake for growth and repair",
+                "• Include plenty of fruits and vegetables",
+                "• Ensure adequate iron intake (leafy greens, meat, beans)",
+                "• Provide regular meals and healthy snacks",
+                "• Encourage physical activity alongside proper nutrition"
+            ])
+        
+        # Add status-specific tips
+        if status in ["severe_malnutrition", "moderate_malnutrition"]:
+            tips.append("URGENT: Consider therapeutic feeding programs and medical consultation")
+            tips.append("Monitor child closely and seek immediate healthcare support")
+        
+        return tips
+    
     def update_photo_with_analysis(self, db: Session, photo: Photo, analysis_result: AIAnalysisResponse) -> Photo:
         """Update photo with AI analysis results"""
         import json
@@ -450,6 +634,24 @@ class AIAnalysisService:
                 photo.detected_features = json.dumps(analysis_result.detected_features)
             else:
                 photo.detected_features = None
+            
+            # Convert detected_diseases list to JSON string
+            if analysis_result.detected_diseases:
+                photo.detected_diseases = json.dumps(analysis_result.detected_diseases)
+            else:
+                photo.detected_diseases = None
+            
+            # Convert disaster_predictions list to JSON string
+            if analysis_result.disaster_predictions:
+                photo.disaster_predictions = json.dumps(analysis_result.disaster_predictions)
+            else:
+                photo.disaster_predictions = None
+            
+            # Convert nutrition_tips list to JSON string
+            if analysis_result.nutrition_tips:
+                photo.nutrition_tips = json.dumps(analysis_result.nutrition_tips)
+            else:
+                photo.nutrition_tips = None
             
             # Set analysis notes
             photo.analysis_notes = analysis_result.analysis_notes

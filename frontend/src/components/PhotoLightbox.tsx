@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Info } from 'lucide-react'
 import { Photo } from '../services/photoService'
+import PhotoAnalysisDetails from './PhotoAnalysisDetails'
 
 interface PhotoLightboxProps {
   photos: Photo[]
@@ -13,6 +14,7 @@ interface PhotoLightboxProps {
 const PhotoLightbox = ({ photos, currentIndex, isOpen, onClose, getPhotoUrl }: PhotoLightboxProps) => {
   const [index, setIndex] = useState(currentIndex)
   const [zoom, setZoom] = useState(1)
+  const [showAnalysis, setShowAnalysis] = useState(false)
 
   useEffect(() => {
     setIndex(currentIndex)
@@ -128,6 +130,18 @@ const PhotoLightbox = ({ photos, currentIndex, isOpen, onClose, getPhotoUrl }: P
         </button>
       </div>
 
+      {/* Analysis Toggle Button */}
+      {(currentPhoto.detected_diseases || currentPhoto.disaster_predictions || currentPhoto.nutrition_tips) && (
+        <button
+          onClick={() => setShowAnalysis(!showAnalysis)}
+          className="absolute top-20 left-4 flex items-center space-x-2 bg-black bg-opacity-50 rounded-lg p-2 text-white hover:bg-opacity-70 transition-colors z-10"
+          aria-label="Toggle analysis details"
+        >
+          <Info className="h-5 w-5" />
+          <span className="text-sm">Analysis</span>
+        </button>
+      )}
+
       {/* Photo Info */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 rounded-lg p-4 text-white text-center z-10 max-w-md">
         <p className="font-medium mb-1">{currentPhoto.filename || currentPhoto.file_name || 'Photo'}</p>
@@ -155,6 +169,24 @@ const PhotoLightbox = ({ photos, currentIndex, isOpen, onClose, getPhotoUrl }: P
           {index + 1} of {photos.length}
         </p>
       </div>
+
+      {/* Analysis Details Sidebar */}
+      {showAnalysis && (
+        <div className="absolute right-0 top-0 h-full w-96 bg-white overflow-y-auto z-20 shadow-2xl">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Analysis Details</h3>
+              <button
+                onClick={() => setShowAnalysis(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <PhotoAnalysisDetails photo={currentPhoto} />
+          </div>
+        </div>
+      )}
 
       {/* Photo */}
       <div className="w-full h-full flex items-center justify-center p-4">

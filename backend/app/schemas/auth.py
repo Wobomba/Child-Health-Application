@@ -16,6 +16,7 @@ class Token(BaseModel):
     user_id: Optional[int] = None
     username: Optional[str] = None
     role: Optional[str] = None
+    is_first_login: Optional[bool] = False  # Indicates if this is the first login
 
 class TokenData(BaseModel):
     """Token payload data"""
@@ -59,6 +60,7 @@ class UserResponse(BaseModel):
     district: Optional[str] = None
     is_active: bool
     is_verified: bool
+    last_login: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

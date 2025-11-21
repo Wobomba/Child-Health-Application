@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { authService } from '../services/authService'
-import { Heart, User, Lock, Mail, UserPlus } from 'lucide-react'
+import { User, Lock, Mail, UserPlus, MapPin, Building } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const RegisterPage = () => {
@@ -13,6 +13,8 @@ const RegisterPage = () => {
     password: '',
     confirmPassword: '',
     full_name: '',
+    district: '',
+    village: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -35,6 +37,14 @@ const RegisterPage = () => {
       newErrors.full_name = 'Full name is required'
     }
     
+    if (!formData.district.trim()) {
+      newErrors.district = 'District is required'
+    }
+    
+    if (!formData.village.trim()) {
+      newErrors.village = 'Village is required'
+    }
+    
     if (!formData.password) {
       newErrors.password = 'Password is required'
     } else if (formData.password.length < 6) {
@@ -55,6 +65,8 @@ const RegisterPage = () => {
       email: formData.email,
       password: formData.password,
       full_name: formData.full_name,
+      district: formData.district,
+      village: formData.village,
     }),
     onSuccess: () => {
       toast.success('Account created successfully! Please login.')
@@ -78,10 +90,13 @@ const RegisterPage = () => {
       <div className="max-w-md w-full">
         {/* Logo/Brand Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-            <Heart className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img 
+              src="/logo.png" 
+              alt="PostPart Logo" 
+              className="h-24 w-auto object-contain"
+            />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">PostPart</h1>
           <p className="text-lg text-gray-600">Child Health Monitoring</p>
         </div>
 
@@ -222,6 +237,58 @@ const RegisterPage = () => {
               </div>
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-danger-600">{errors.confirmPassword}</p>
+              )}
+            </div>
+
+            {/* District */}
+            <div>
+              <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-1">
+                District
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  id="district"
+                  name="district"
+                  type="text"
+                  required
+                  className={`input pl-10 ${errors.district ? 'border-danger-500 focus:ring-danger-500' : ''}`}
+                  placeholder="Enter your district"
+                  value={formData.district}
+                  onChange={(e) => {
+                    setFormData({ ...formData, district: e.target.value })
+                    setErrors({ ...errors, district: '' })
+                  }}
+                />
+              </div>
+              {errors.district && (
+                <p className="mt-1 text-sm text-danger-600">{errors.district}</p>
+              )}
+            </div>
+
+            {/* Village */}
+            <div>
+              <label htmlFor="village" className="block text-sm font-medium text-gray-700 mb-1">
+                Village
+              </label>
+              <div className="relative">
+                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  id="village"
+                  name="village"
+                  type="text"
+                  required
+                  className={`input pl-10 ${errors.village ? 'border-danger-500 focus:ring-danger-500' : ''}`}
+                  placeholder="Enter your village"
+                  value={formData.village}
+                  onChange={(e) => {
+                    setFormData({ ...formData, village: e.target.value })
+                    setErrors({ ...errors, village: '' })
+                  }}
+                />
+              </div>
+              {errors.village && (
+                <p className="mt-1 text-sm text-danger-600">{errors.village}</p>
               )}
             </div>
 

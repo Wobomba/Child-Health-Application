@@ -35,6 +35,9 @@ class Photo(Base):
     detected_features = Column(Text, nullable=True)  # JSON string of detected features
     recommendations = Column(Text, nullable=True)    # AI-generated recommendations
     analysis_notes = Column(Text, nullable=True)     # Manual notes from healthcare workers
+    detected_diseases = Column(Text, nullable=True)  # JSON string of detected diseases (rickets, kwashiorkor, etc.)
+    disaster_predictions = Column(Text, nullable=True)  # JSON string of potential consequences if not treated
+    nutrition_tips = Column(Text, nullable=True)      # JSON string of age-based nutrition recommendations
     
     # Processing flags
     is_analyzed = Column(Boolean, default=False)
