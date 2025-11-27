@@ -61,7 +61,6 @@ const LoginPage = () => {
               className="h-24 w-auto object-contain"
             />
           </div>
-          <p className="text-lg text-gray-600">Child Health Monitoring</p>
         </div>
 
         {/* Login Card */}

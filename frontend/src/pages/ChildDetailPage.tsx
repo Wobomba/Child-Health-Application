@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { childService } from '../services/childService'
 import { photoService } from '../services/photoService'
-import { ArrowLeft, Camera, User, Calendar, MapPin, Users, Activity, BarChart3, Weight, Ruler } from 'lucide-react'
+import { ArrowLeft, Camera, User, Calendar, MapPin, Users, Activity, BarChart3, Weight, Ruler, Utensils, AlertCircle } from 'lucide-react'
 import StatusBadge from '../components/StatusBadge'
 import RiskIndicator from '../components/RiskIndicator'
 import PhotoUploadModal from '../components/PhotoUploadModal'
@@ -11,6 +11,7 @@ import PhotoLightbox from '../components/PhotoLightbox'
 import GrowthChart from '../components/GrowthChart'
 import GrowthRecordForm from '../components/GrowthRecordForm'
 import AssessmentList from '../components/AssessmentList'
+import ChildHistoryModal from '../components/ChildHistoryModal'
 import { growthService } from '../services/growthService'
 
 const ChildDetailPage = () => {
@@ -21,6 +22,8 @@ const ChildDetailPage = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [showGrowthForm, setShowGrowthForm] = useState(false)
+  const [showAssessmentForm, setShowAssessmentForm] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   const { data: child, isLoading } = useQuery({
     queryKey: ['child', id],
@@ -160,63 +163,142 @@ const ChildDetailPage = () => {
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Child Information */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <User className="h-5 w-5 mr-2 text-primary-600" />
-                  Personal Information
-                </h3>
-                <dl className="space-y-4">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Date of Birth</dt>
-                    <dd className="mt-1 text-base text-gray-900">
-                      {new Date(child.date_of_birth).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Gender</dt>
-                    <dd className="mt-1 text-base text-gray-900 capitalize">{child.gender}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Parent/Guardian</dt>
-                    <dd className="mt-1 text-base text-gray-900">{child.parent_name}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Location</dt>
-                    <dd className="mt-1 text-base text-gray-900 flex items-center">
-                      <MapPin className="h-4 w-4 mr-1 text-gray-400" />
-                      {child.village}, {child.district}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-
-              {/* Health Summary */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Activity className="h-5 w-5 mr-2 text-primary-600" />
-                  Health Summary
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-2">Total Photos</p>
-                    <p className="text-2xl font-bold text-gray-900">{photos?.items?.length || 0}</p>
-                  </div>
-                  {latestPhoto && latestPhoto.malnutrition_score !== null && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Child Information */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <User className="h-5 w-5 mr-2 text-primary-600" />
+                    Personal Information
+                  </h3>
+                  <dl className="space-y-4">
                     <div>
-                      <RiskIndicator score={latestPhoto.malnutrition_score} />
+                      <dt className="text-sm font-medium text-gray-500">Date of Birth</dt>
+                      <dd className="mt-1 text-base text-gray-900">
+                        {new Date(child.date_of_birth).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </dd>
                     </div>
-                  )}
-                  {!latestPhoto && (
-                    <p className="text-sm text-gray-500">No analysis data available</p>
-                  )}
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Gender</dt>
+                      <dd className="mt-1 text-base text-gray-900 capitalize">{child.gender}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Parent/Guardian</dt>
+                      <dd className="mt-1 text-base text-gray-900">{child.parent_name}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Location</dt>
+                      <dd className="mt-1 text-base text-gray-900 flex items-center">
+                        <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                        {child.village}, {child.district}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+
+                {/* Health Summary */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Activity className="h-5 w-5 mr-2 text-primary-600" />
+                    Health Summary
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-2">Total Photos</p>
+                      <p className="text-2xl font-bold text-gray-900">{photos?.items?.length || 0}</p>
+                    </div>
+                    {latestPhoto && latestPhoto.malnutrition_score !== null && (
+                      <div>
+                        <RiskIndicator score={latestPhoto.malnutrition_score} />
+                      </div>
+                    )}
+                    {!latestPhoto && (
+                      <p className="text-sm text-gray-500">No analysis data available</p>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Nutrition Recommendations - Prominently Displayed */}
+              {latestPhoto && (latestPhoto.nutrition_tips || latestPhoto.recommendations) && (
+                <div className="bg-gradient-to-r from-primary-50 to-pink-50 rounded-lg border-2 border-primary-200 p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Utensils className="h-6 w-6 text-primary-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">🍽️ Nutrition & Meal Recommendations</h3>
+                  </div>
+                  
+                  {latestPhoto.nutrition_tips && Array.isArray(latestPhoto.nutrition_tips) && latestPhoto.nutrition_tips.length > 0 && (
+                    <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                      {latestPhoto.nutrition_tips.map((tip: string, index: number) => (
+                        <div
+                          key={index}
+                          className={`text-sm ${
+                            tip.startsWith('For') || tip.startsWith('URGENT') || tip.startsWith('⚠️') || tip.startsWith('🍽️')
+                              ? 'font-semibold text-primary-800 bg-white px-3 py-2 rounded border-l-4 border-primary-500'
+                              : tip.startsWith('•')
+                              ? 'text-gray-700 ml-4 pl-2'
+                              : tip.startsWith('📋')
+                              ? 'font-semibold text-gray-800 mt-2'
+                              : 'text-gray-600'
+                          }`}
+                        >
+                          {tip}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {latestPhoto.recommendations && Array.isArray(latestPhoto.recommendations) && latestPhoto.recommendations.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-primary-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Medical Recommendations:</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        {latestPhoto.recommendations.map((rec: string, index: number) => (
+                          <li key={index} className="text-sm text-gray-700">{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="mt-4 pt-4 border-t border-primary-200">
+                    <p className="text-xs text-gray-600">
+                      💡 Click on a photo to view detailed analysis including detected diseases and potential consequences
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Detected Diseases Summary */}
+              {latestPhoto && latestPhoto.detected_diseases && Array.isArray(latestPhoto.detected_diseases) && latestPhoto.detected_diseases.length > 0 && (
+                <div className="bg-warning-50 rounded-lg border border-warning-200 p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <AlertCircle className="h-6 w-6 text-warning-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">Detected Conditions</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {latestPhoto.detected_diseases.map((disease: any, index: number) => (
+                      <div key={index} className="bg-white rounded-lg p-3 border-l-4 border-warning-500">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-sm text-gray-900 capitalize">
+                            {typeof disease === 'string' ? disease : disease.disease?.replace(/_/g, ' ')}
+                          </span>
+                          {typeof disease === 'object' && disease.confidence && (
+                            <span className="text-xs bg-warning-100 text-warning-800 px-2 py-1 rounded">
+                              {Math.round(disease.confidence * 100)}% confidence
+                            </span>
+                          )}
+                        </div>
+                        {typeof disease === 'object' && disease.description && (
+                          <p className="text-xs text-gray-600 mt-1">{disease.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -403,11 +485,19 @@ const ChildDetailPage = () => {
           )}
 
           {activeTab === 'assessments' && (
-            <div>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Health Assessments</h3>
+                  <p className="text-sm text-gray-500 mt-1">Comprehensive health evaluations and clinical assessments</p>
+                </div>
+              </div>
               {child && (
                 <AssessmentList
                   childId={child.id}
                   childName={`${child.first_name} ${child.last_name}`}
+                  openFormOnMount={showAssessmentForm}
+                  onFormClose={() => setShowAssessmentForm(false)}
                 />
               )}
             </div>
@@ -429,12 +519,20 @@ const ChildDetailPage = () => {
             Record Growth
           </button>
           <button 
-            onClick={() => setActiveTab('assessments')}
+            onClick={() => {
+              setActiveTab('assessments')
+              setShowAssessmentForm(true)
+            }}
             className="btn btn-secondary w-full justify-center"
           >
             Add Assessment
           </button>
-          <button className="btn btn-secondary w-full justify-center">View History</button>
+          <button 
+            onClick={() => setShowHistory(true)}
+            className="btn btn-secondary w-full justify-center"
+          >
+            View History
+          </button>
         </div>
       </div>
 
@@ -453,6 +551,16 @@ const ChildDetailPage = () => {
         <GrowthRecordForm
           isOpen={showGrowthForm}
           onClose={() => setShowGrowthForm(false)}
+          childId={child.id}
+          childName={`${child.first_name} ${child.last_name}`}
+        />
+      )}
+
+      {/* History Modal */}
+      {child && (
+        <ChildHistoryModal
+          isOpen={showHistory}
+          onClose={() => setShowHistory(false)}
           childId={child.id}
           childName={`${child.first_name} ${child.last_name}`}
         />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { assessmentService, Assessment } from '../services/assessmentService'
 import { Calendar, Activity, AlertCircle, Eye, Edit, Trash2, Plus } from 'lucide-react'
@@ -11,13 +11,22 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 interface AssessmentListProps {
   childId: number
   childName?: string
+  openFormOnMount?: boolean
+  onFormClose?: () => void
 }
 
-const AssessmentList = ({ childId, childName }: AssessmentListProps) => {
-  const [showForm, setShowForm] = useState(false)
+const AssessmentList = ({ childId, childName, openFormOnMount = false, onFormClose }: AssessmentListProps) => {
+  const [showForm, setShowForm] = useState(openFormOnMount)
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null)
   const [viewingAssessment, setViewingAssessment] = useState<Assessment | null>(null)
   const queryClient = useQueryClient()
+
+  // Update form state when openFormOnMount changes
+  useEffect(() => {
+    if (openFormOnMount) {
+      setShowForm(true)
+    }
+  }, [openFormOnMount])
 
   const { data: assessments, isLoading } = useQuery({
     queryKey: ['assessments', 'child', childId],
@@ -212,12 +221,13 @@ const AssessmentList = ({ childId, childName }: AssessmentListProps) => {
       </div>
 
       {/* Assessment Form Modal */}
-      <AssessmentForm
-        isOpen={showForm}
-        onClose={() => {
-          setShowForm(false)
-          setSelectedAssessment(null)
-        }}
+        <AssessmentForm
+          isOpen={showForm}
+          onClose={() => {
+            setShowForm(false)
+            setSelectedAssessment(null)
+            if (onFormClose) onFormClose()
+          }}
         childId={childId}
         childName={childName}
         assessment={selectedAssessment || undefined}
