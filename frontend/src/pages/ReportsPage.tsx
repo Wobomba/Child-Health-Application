@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, Download, Calendar, Filter, TrendingUp, AlertTriangle, Users, Camera } from 'lucide-react'
+import { FileText, Download, Calendar, Filter, TrendingUp, AlertTriangle, Users, Camera, Search, X } from 'lucide-react'
 import { childService } from '../services/childService'
 import { photoService } from '../services/photoService'
-import { exportChildren, exportPhotos } from '../utils/exportUtils'
+import { exportChildren, exportPhotos, exportSummaryReport, exportRiskReport, exportReportToPDF } from '../utils/exportUtils'
 import toast from 'react-hot-toast'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
 
@@ -11,6 +11,7 @@ const ReportsPage = () => {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [reportType, setReportType] = useState<'summary' | 'children' | 'photos' | 'risk'>('summary')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const { data: childrenData, isLoading: childrenLoading } = useQuery({
     queryKey: ['children', 'reports'],
@@ -31,13 +32,60 @@ const ReportsPage = () => {
     return items.filter((item: any) => {
       const itemDate = new Date(item.created_at)
       if (dateFrom && itemDate < new Date(dateFrom)) return false
-      if (dateTo && itemDate > new Date(dateTo)) return false
+      if (dateTo) {
+        const toDate = new Date(dateTo)
+        toDate.setHours(23, 59, 59, 999) // Include the entire end date
+        if (itemDate > toDate) return false
+      }
       return true
     })
   }
 
-  const filteredChildren = filterByDate(childrenData?.items || [])
-  const filteredPhotos = filterByDate(photosData?.items || [])
+  // Search filter function
+  const filterBySearch = (items: any[], searchFields: string[]) => {
+    if (!searchQuery.trim()) return items
+    
+    const query = searchQuery.toLowerCase().trim()
+    return items.filter((item: any) => {
+      return searchFields.some(field => {
+        const value = item[field]
+        if (value === null || value === undefined) return false
+        return String(value).toLowerCase().includes(query)
+      })
+    })
+  }
+
+  const dateFilteredChildren = useMemo(() => {
+    return filterByDate(childrenData?.items || [])
+  }, [childrenData?.items, dateFrom, dateTo])
+
+  const dateFilteredPhotos = useMemo(() => {
+    return filterByDate(photosData?.items || [])
+  }, [photosData?.items, dateFrom, dateTo])
+
+  // Apply search filter
+  const filteredChildren = useMemo(() => {
+    return filterBySearch(dateFilteredChildren, [
+      'first_name', 'last_name', 'unique_id', 'village', 'district', 
+      'parent_name', 'parent_phone', 'parent_address'
+    ])
+  }, [dateFilteredChildren, searchQuery])
+
+  const filteredPhotos = useMemo(() => {
+    const photosWithChildNames = dateFilteredPhotos.map((photo: any) => {
+      const child = dateFilteredChildren.find((c: any) => c.id === photo.child_id)
+      return {
+        ...photo,
+        child_name: child ? `${child.first_name} ${child.last_name}` : 'Unknown',
+        child_village: child?.village || '',
+        child_district: child?.district || ''
+      }
+    })
+    return filterBySearch(photosWithChildNames, [
+      'child_name', 'filename', 'file_name', 'analysis_status', 
+      'child_village', 'child_district', 'notes'
+    ])
+  }, [dateFilteredPhotos, dateFilteredChildren, searchQuery])
 
   // Calculate statistics
   const stats = {
@@ -78,13 +126,58 @@ const ReportsPage = () => {
     }))
   }
 
-  const handleExport = () => {
-    if (reportType === 'children') {
-      exportChildren(filteredChildren)
-      toast.success('Children report exported!')
-    } else if (reportType === 'photos') {
-      exportPhotos(filteredPhotos, filteredChildren)
-      toast.success('Photos report exported!')
+  const handleExport = async () => {
+    try {
+      if (reportType === 'summary') {
+        await exportSummaryReport({
+          title: 'Summary Report',
+          type: 'summary',
+          dateFrom,
+          dateTo,
+          stats,
+          children: filteredChildren,
+          photos: filteredPhotos
+        })
+        toast.success('Summary report exported!')
+      } else if (reportType === 'children') {
+        await exportReportToPDF({
+          title: 'Children Report',
+          type: 'children',
+          dateFrom,
+          dateTo,
+          children: filteredChildren
+        })
+        toast.success('Children report exported!')
+      } else if (reportType === 'photos') {
+        await exportReportToPDF({
+          title: 'Photos & Analysis Report',
+          type: 'photos',
+          dateFrom,
+          dateTo,
+          photos: filteredPhotos.map((photo: any) => {
+            const child = filteredChildren.find((c: any) => c.id === photo.child_id)
+            return {
+              ...photo,
+              child_name: child ? `${child.first_name} ${child.last_name}` : 'Unknown'
+            }
+          })
+        })
+        toast.success('Photos report exported!')
+      } else if (reportType === 'risk') {
+        const riskData = riskByLocation()
+        await exportRiskReport({
+          title: 'Risk Analysis Report',
+          type: 'risk',
+          dateFrom,
+          dateTo,
+          stats,
+          riskData
+        })
+        toast.success('Risk analysis report exported!')
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Failed to export report. Please try again.')
     }
   }
 
@@ -111,8 +204,34 @@ const ReportsPage = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center space-x-2 mb-4">
           <Filter className="h-5 w-5 text-gray-400" />
-          <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Filters & Search</h2>
         </div>
+        
+        {/* Search Bar */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Search
+          </label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, ID, location, phone, or other fields..."
+              className="input pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -156,6 +275,7 @@ const ReportsPage = () => {
               onClick={() => {
                 setDateFrom('')
                 setDateTo('')
+                setSearchQuery('')
               }}
               className="btn btn-secondary w-full"
             >
@@ -163,6 +283,16 @@ const ReportsPage = () => {
             </button>
           </div>
         </div>
+
+        {/* Results count */}
+        {(searchQuery || dateFrom || dateTo) && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600">
+              Showing {reportType === 'children' ? filteredChildren.length : filteredPhotos.length} result(s)
+              {searchQuery && ` matching "${searchQuery}"`}
+            </p>
+          </div>
+        )}
       </div>
 
       {isLoading ? (

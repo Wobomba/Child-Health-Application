@@ -23,9 +23,7 @@ const AssessmentList = ({ childId, childName, openFormOnMount = false, onFormClo
 
   // Update form state when openFormOnMount changes
   useEffect(() => {
-    if (openFormOnMount) {
-      setShowForm(true)
-    }
+    setShowForm(openFormOnMount)
   }, [openFormOnMount])
 
   const { data: assessments, isLoading } = useQuery({
@@ -83,20 +81,34 @@ const AssessmentList = ({ childId, childName, openFormOnMount = false, onFormClo
 
   if (!assessments || assessments.items.length === 0) {
     return (
-      <div className="text-center py-12 bg-gray-50 rounded-lg">
-        <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-500 mb-4">No health assessments recorded yet</p>
-        <button
-          onClick={() => {
+      <>
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-500 mb-4">No health assessments recorded yet</p>
+          <button
+            onClick={() => {
+              setSelectedAssessment(null)
+              setShowForm(true)
+            }}
+            className="btn btn-primary"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Create First Assessment
+          </button>
+        </div>
+        {/* Assessment Form Modal - render even when empty */}
+        <AssessmentForm
+          isOpen={showForm}
+          onClose={() => {
+            setShowForm(false)
             setSelectedAssessment(null)
-            setShowForm(true)
+            if (onFormClose) onFormClose()
           }}
-          className="btn btn-primary"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Create First Assessment
-        </button>
-      </div>
+          childId={childId}
+          childName={childName}
+          assessment={selectedAssessment || undefined}
+        />
+      </>
     )
   }
 
